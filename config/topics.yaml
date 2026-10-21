@@ -1,21 +1,42 @@
 start_date: "2026-10-22"        # Day 1
-timezone: "Asia/Colombo"        # used to decide what "today" is
-max_pages: 6                    # hard cap for the whole PDF
+timezone: "Asia/Colombo"
+max_pages: 6
 
-# Each topic is searched as "<topic> tutorial" on GeeksforGeeks. The tutorial
-# page's article links, in order, ARE the subtopics: Day 1 = 1st link, Day 2 = 2nd...
-# If the search picks the wrong page, pin it by pasting the tutorial URL after the colon.
+# Each topic = list of candidate GFG tutorial-landing URLs, tried in order.
+# The first one yielding >= 8 article links wins (then cached).
+# If a list is empty, a web search is used as the fallback.
+# Day 1 = 1st link on that page, Day 2 = 2nd, ...
 topics:
   System Design:
+    - https://www.geeksforgeeks.org/system-design/system-design-tutorial/
   DBMS:
+    - https://www.geeksforgeeks.org/dbms/dbms/
   Java:
+    - https://www.geeksforgeeks.org/java/java/
   Python:
+    - https://www.geeksforgeeks.org/python/python-programming-language-tutorial/
   React:
+    - https://www.geeksforgeeks.org/reactjs/react-tutorial/
+    - https://www.geeksforgeeks.org/reactjs/reactjs-tutorial/
+    - https://www.geeksforgeeks.org/react/react-tutorial/
   Spring:
+    - https://www.geeksforgeeks.org/advance-java/spring-boot/
   Next.js:
+    - https://www.geeksforgeeks.org/nextjs/nextjs-tutorial/
   Docker:
+    - https://www.geeksforgeeks.org/devops/docker-tutorial/
+    - https://www.geeksforgeeks.org/docker/docker-tutorial/
   Kubernetes:
+    - https://www.geeksforgeeks.org/devops/kubernetes-tutorial/
+    - https://www.geeksforgeeks.org/kubernetes/kubernetes-tutorial/
   Node.js:
+    - https://www.geeksforgeeks.org/node-js/nodejs/
   Express.js:
+    - https://www.geeksforgeeks.org/node-js/express-js/
+    - https://www.geeksforgeeks.org/node-js/expressjs/
+    - https://www.geeksforgeeks.org/node-js/expressjs-tutorial/
   Angular:
+    - https://www.geeksforgeeks.org/angular-js/angular-tutorial/
   PHP:
+    - https://www.geeksforgeeks.org/php/php-tutorial/
+    - https://www.geeksforgeeks.org/php/php-tutorial-for-beginners/
