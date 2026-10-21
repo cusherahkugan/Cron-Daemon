@@ -39,6 +39,10 @@ SKIP_TEXT = ("interview", "cheat sheet", "cheatsheet", "quiz", "projects", "road
 # Parent / landing pages that are never a real "subtopic".
 HUB_SLUGS = {"devops-tutorial", "advanced-java", "nodejs", "angularjs", "java", "dbms",
              "react", "reactjs", "php", "python"}
+# Slugs ending in "-tutorial(s)" are only treated as hub/landing pages when short
+# (e.g. "docker-tutorial"). Longer slugs such as
+# "introduction-to-arrays-data-structure-and-algorithm-tutorials" are real articles.
+HUB_MAX_WORDS = 3
 # Extra words that count as a match for a topic keyword.
 KEYWORD_ALIASES = {"kubernetes": ("kubernetes", "k8s")}
 
@@ -75,7 +79,10 @@ def _keyword(topic: str) -> str:
 
 def _is_hub(slug: str) -> bool:
     slug = slug.lower()
-    return slug in HUB_SLUGS or slug.endswith(("-tutorial", "-tutorials"))
+    if slug in HUB_SLUGS:
+        return True
+    return (slug.endswith(("-tutorial", "-tutorials"))
+            and len(slug.split("-")) <= HUB_MAX_WORDS)
 
 
 # --------------------------------------------------------------------------- links
