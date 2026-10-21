@@ -1,11 +1,12 @@
 start_date: "2026-10-22"        # Day 1
 timezone: "Asia/Colombo"
-max_pages: 6
+# Target page count. The PDF shrinks the font (down to 5pt) to fit this.
+# If it still doesn't fit, extra pages are added - nothing is ever cut.
+max_pages: 10
 
 # Each topic = list of candidate GFG tutorial-landing URLs, tried in order.
 # The first one yielding >= 8 article links wins (then cached).
-# If a list is empty, a web search is used as the fallback.
-# Day 1 = 1st link on that page, Day 2 = 2nd, ...
+# Day 1 = 1st article link on that page, Day 2 = 2nd, ...
 topics:
   System Design:
     - https://www.geeksforgeeks.org/system-design/system-design-tutorial/
@@ -32,4 +33,4 @@ topics:
   Angular:
     - https://www.geeksforgeeks.org/angular-js/angular-tutorial/
   PHP:
-    -https://www.geeksforgeeks.org/php/php-tutorial/
+    - https://www.geeksforgeeks.org/php/php-tutorial/

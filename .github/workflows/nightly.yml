@@ -33,14 +33,13 @@ jobs:
       - name: Unit tests
         run: pytest -q
 
-      # Keeps "Day N -> same subtopic" stable. Saved fresh every run; restored by prefix.
-      # Editing config/topics.yaml changes the prefix, which forces a re-scrape.
+      # Keeps "Day N -> same subtopic" stable. Changing topics.yaml or scrape.py busts it.
       - uses: actions/cache@v4
         with:
           path: cache/links.json
-          key: tutorial-links-${{ hashFiles('config/topics.yaml') }}-${{ github.run_id }}
+          key: tutorial-links-${{ hashFiles('config/topics.yaml', 'src/scrape.py') }}-${{ github.run_id }}
           restore-keys: |
-            tutorial-links-${{ hashFiles('config/topics.yaml') }}-
+            tutorial-links-${{ hashFiles('config/topics.yaml', 'src/scrape.py') }}-
 
       - name: Generate and email PDF
         env:

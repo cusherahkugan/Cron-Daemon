@@ -13,7 +13,13 @@ def test_pdf_is_created(tmp_path):
     assert out.read_bytes().startswith(b"%PDF")
 
 
-def test_page_cap_is_enforced(tmp_path):
+def test_modest_content_fits_target(tmp_path):
     out = tmp_path / "t.pdf"
-    pages = build_pdf("2026-10-22", [_section(i) for i in range(13)], str(out), max_pages=6)
+    pages = build_pdf("2026-10-22", [_section(i, 10) for i in range(13)], str(out), max_pages=6)
     assert pages <= 6
+
+
+def test_nothing_is_cut_when_over_target(tmp_path):
+    out = tmp_path / "t.pdf"
+    pages = build_pdf("2026-10-22", [_section(i) for i in range(3)], str(out), max_pages=1)
+    assert pages > 1   # extra pages are added instead of hiding content

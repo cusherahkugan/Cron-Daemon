@@ -6,6 +6,7 @@ import random
 import re
 import time
 from functools import lru_cache
+from html import escape as _esc
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import markdown
@@ -20,15 +21,22 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 CACHE_PATH = "cache/links.json"
+CACHE_VERSION = 2
 MIN_LINKS = 8
 
 SKIP_SEGMENTS = {"courses", "videos", "user", "tag", "category", "batch", "explore",
                  "jobs", "contest", "puzzles", "interview-experiences", "community"}
 SKIP_WORDS = ("interview", "quiz", "cheat-sheet", "mcq", "projects", "roadmap", "-books",
-              "exercise", "practice", "-pdf")
+              "exercise", "practice", "-pdf", "complete-reference", "programming-examples")
 SKIP_TEXT = ("interview", "cheat sheet", "cheatsheet", "quiz", "projects", "roadmap",
              "companies using", "career", "complete reference", "exercises",
              "practice questions", "mcq", "comparison of")
+
+# Parent / landing pages that are never a real "subtopic".
+HUB_SLUGS = {"devops-tutorial", "advanced-java", "nodejs", "angularjs", "java", "dbms",
+             "react", "reactjs", "php", "python"}
+# Extra words that count as a match for a topic keyword.
+KEYWORD_ALIASES = {"kubernetes": ("kubernetes", "k8s")}
 
 
 def _get(url: str, tries: int = 2) -> str | None:
@@ -51,15 +59,39 @@ def _norm(url: str) -> str:
     return u.rstrip("/") + "/"
 
 
+def _slug(s: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+def _keyword(topic: str) -> str:
+    """'Docker' -> 'docker', 'Express.js' -> 'express', 'Node.js' -> 'node'."""
+    k = _slug(topic)
+    return k[:-2] if k.endswith("js") and len(k) > 4 else k
+
+
+def _is_hub(slug: str) -> bool:
+    slug = slug.lower()
+    return slug in HUB_SLUGS or slug.endswith(("-tutorial", "-tutorials"))
+
+
 # --------------------------------------------------------------------------- links
-def extract_links(page_html: str, tutorial_url: str) -> list[str]:
-    """Ordered, de-duplicated article links that belong to the same tutorial section."""
+def extract_links(page_html: str, tutorial_url: str, topic: str | None = None) -> list[str]:
+    """Ordered, de-duplicated article links that belong to the same tutorial section.
+
+    When several topics share one GFG section (Docker/Kubernetes in /devops/, Express in
+    /node-js/, Spring in /advance-java/) the link slug must contain the topic keyword, so
+    the parent hub page is never picked as 'Day 1'."""
     tree = lh.fromstring(page_html)
     tree.make_links_absolute(tutorial_url)
     for bad in tree.xpath("//footer | //header | //nav | //aside"):
         bad.drop_tree()
     section = urlparse(tutorial_url).path.strip("/").split("/")[0]
     self_url = _norm(tutorial_url)
+
+    kw = _keyword(topic) if topic else ""
+    kws = KEYWORD_ALIASES.get(kw, (kw,)) if kw else ()
+    need_kw = bool(kws) and not _slug(section).startswith(kw)
+
     links: list[str] = []
     for a in tree.xpath("//a[@href]"):
         href = a.get("href")
@@ -69,7 +101,10 @@ def extract_links(page_html: str, tutorial_url: str) -> list[str]:
         segs = p.path.strip("/").split("/")
         if len(segs) < 2 or segs[0] in SKIP_SEGMENTS or segs[0] != section:
             continue
-        if any(w in segs[-1].lower() for w in SKIP_WORDS):
+        last = segs[-1].lower()
+        if any(w in last for w in SKIP_WORDS) or _is_hub(last):
+            continue
+        if need_kw and not any(k in _slug(last) for k in kws):
             continue
         text = " ".join(a.text_content().split()).lower()
         if any(w in text for w in SKIP_TEXT):
@@ -84,11 +119,12 @@ def _load_cache(path: str = CACHE_PATH) -> dict:
     try:
         with open(path, encoding="utf-8") as f:
             c = json.load(f)
-        if isinstance(c, dict) and "links" in c and "resolved" in c:
+        if (isinstance(c, dict) and c.get("v") == CACHE_VERSION
+                and "links" in c and "resolved" in c):
             return c
     except Exception:
         pass
-    return {"resolved": {}, "links": {}}
+    return {"v": CACHE_VERSION, "resolved": {}, "links": {}}
 
 
 def _save_cache(cache: dict, path: str = CACHE_PATH) -> None:
@@ -99,10 +135,12 @@ def _save_cache(cache: dict, path: str = CACHE_PATH) -> None:
 
 def resolve_topic(topic: str, pinned: list[str], search_fn, cache_path: str = CACHE_PATH):
     """Return (tutorial_url, ordered_article_links) for a topic, cached so that
-    'Day N -> same subtopic' stays stable. Pinned URLs are tried first, then search."""
+    'Day N -> same subtopic' stays stable. Pinned URLs are tried first, then search.
+    A cached entry is only reused if it still matches the pinned URLs in topics.yaml."""
     cache = _load_cache(cache_path)
     url = cache["resolved"].get(topic)
-    if url and cache["links"].get(url):
+    pinned_norm = {p.rstrip("/") + "/" for p in pinned}
+    if url and cache["links"].get(url) and (not pinned_norm or url in pinned_norm):
         return url, cache["links"][url]
 
     def candidates():
@@ -117,7 +155,7 @@ def resolve_topic(topic: str, pinned: list[str], search_fn, cache_path: str = CA
             continue
         seen.add(n)
         page = _get(n)
-        links = extract_links(page, n) if page else []
+        links = extract_links(page, n, topic) if page else []
         print(f"  [{topic}] candidate {n} -> {len(links)} links")
         if len(links) >= MIN_LINKS:
             best = (n, links)
@@ -170,6 +208,8 @@ _CODE_CLS = re.compile(
     r"(?:^|[\s_-])(?:highlight|highlighter-rouge|hljs|codeblock|code-block|code-container|"
     r"gfg-code|syntaxhighlighter|wp-block-code)(?:$|[\s_-])", re.I)
 _LINE_XP = ".//*[contains(concat(' ', normalize-space(@class), ' '), ' line ')]"
+_TOKEN = "CODEBLOCKXQ{}X"
+_TOKEN_RE = re.compile(r"CODEBLOCKXQ(\d+)X")
 
 
 def _code_text(el) -> str:
@@ -185,12 +225,17 @@ def _code_text(el) -> str:
     return "".join(el.itertext()).strip("\n")
 
 
-def _prepare(page: str) -> str:
-    """Repair GFG markup so trafilatura keeps code line breaks and lazy images."""
+def _prepare(page: str) -> tuple[str, list[str]]:
+    """Repair GFG markup before trafilatura.
+
+    * lazy-loaded images get a real src
+    * every code block is swapped for a placeholder paragraph and its text (with real
+      line breaks) is returned separately, so extraction can't flatten it.
+    Returns (html, code_blocks)."""
     try:
         tree = lh.fromstring(page)
     except Exception:
-        return page
+        return page, []
 
     for img in tree.xpath("//img"):
         for attr in ("data-src", "data-lazy-src", "data-original"):
@@ -199,6 +244,7 @@ def _prepare(page: str) -> str:
                 img.set("src", v)
                 break
 
+    blocks: list[str] = []
     done: set = set()
     for el in list(tree.iter("div", "pre", "figure", "section")):
         if el.getparent() is None:
@@ -212,12 +258,22 @@ def _prepare(page: str) -> str:
         text = _code_text(el)
         if not text.strip():
             continue
-        new = lh.Element("pre")
-        new.text = text
+        new = lh.Element("p")
+        new.text = _TOKEN.format(len(blocks))
         new.tail = el.tail
+        blocks.append(text)
         el.getparent().replace(el, new)
         done.add(el)
-    return lh.tostring(tree, encoding="unicode")
+    return lh.tostring(tree, encoding="unicode"), blocks
+
+
+def _restore_code(article_html: str, blocks: list[str]) -> str:
+    def sub(m):
+        i = int(m.group(1))
+        return f"<pre>{_esc(blocks[i])}</pre>" if i < len(blocks) else ""
+
+    article_html = re.sub(r"<p>\s*CODEBLOCKXQ(\d+)X\s*</p>", sub, article_html)
+    return _TOKEN_RE.sub(sub, article_html)
 
 
 def fetch_article(url: str) -> dict | None:
@@ -229,10 +285,12 @@ def fetch_article(url: str) -> dict | None:
         include_formatting=True,
         include_tables=True,
         include_links=False,
-        include_images=True,   # diagrams are embedded later by condense()
+        include_images=True,   # diagrams are embedded later by full_content()
     )
-    md = trafilatura.extract(_prepare(page), favor_recall=True, **kwargs)
+    prepared, blocks = _prepare(page)
+    md = trafilatura.extract(prepared, favor_recall=True, **kwargs)
     if not md:
+        blocks = []
         md = trafilatura.extract(page, **kwargs)
     if not md:
         print(f"  no content extracted from {url}")
@@ -240,5 +298,5 @@ def fetch_article(url: str) -> dict | None:
     meta = trafilatura.extract_metadata(page)
     title = meta.title if meta and meta.title else url
     title = re.sub(r"\s*[-|–]\s*GeeksforGeeks\s*$", "", title).strip()
-    html = markdown.markdown(md, extensions=["fenced_code", "tables"])
-    return {"title": title, "url": url, "html": html}
+    body = markdown.markdown(md, extensions=["fenced_code", "tables"])
+    return {"title": title, "url": url, "html": _restore_code(body, blocks)}

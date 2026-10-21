@@ -1,10 +1,13 @@
 import scrape
-from scrape import _prepare
+from scrape import _prepare, _restore_code
 
 
 def test_code_block_keeps_newlines():
     html = "<html><body><div class='highlight'><ol><li>x = 1</li><li>print(x)</li></ol></div></body></html>"
-    assert "<pre>x = 1\nprint(x)</pre>" in _prepare(html)
+    out, blocks = _prepare(html)
+    assert blocks == ["x = 1\nprint(x)"]
+    assert "CODEBLOCKXQ0X" in out
+    assert "<pre>x = 1\nprint(x)</pre>" in _restore_code("<p>CODEBLOCKXQ0X</p>", blocks)
 
 
 def test_resolve_skips_bad_candidate(tmp_path, monkeypatch):
