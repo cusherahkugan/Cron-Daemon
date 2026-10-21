@@ -4,6 +4,8 @@ from scrape import extract_links
 HTML = ("<h2>Intro</h2><p>One. Two. Three.</p><p><img src='a.png'></p><pre>"
         + "\n".join(f"line{i}" for i in range(30)) + "</pre>")
 
+DSA_URL = "https://www.geeksforgeeks.org/dsa/dsa-tutorial-learn-data-structures-and-algorithms/"
+
 
 def test_nothing_is_trimmed():
     out = full_content(HTML)
@@ -34,8 +36,8 @@ def test_shared_section_requires_topic_keyword():
               <a href='/devops/kubernetes-architecture/'>k</a><a href='/devops/docker-tutorial/'>self</a>"""
     got = extract_links(page, "https://www.geeksforgeeks.org/devops/docker-tutorial/", "Docker")
     assert got == ["https://www.geeksforgeeks.org/devops/what-is-docker/"]
-    
-    
+
+
 def test_example_and_program_listing_pages_are_skipped():
     page = """<a href='/php/php-programs/'>PHP Programs</a>
               <a href='/php/php-examples/'>PHP Examples</a>
@@ -44,11 +46,23 @@ def test_example_and_program_listing_pages_are_skipped():
     got = extract_links(page, "https://www.geeksforgeeks.org/php/php-tutorial/")
     assert got == ["https://www.geeksforgeeks.org/php/php-syntax/",
                    "https://www.geeksforgeeks.org/php/php-variables/"]
-    
+
+
 def test_company_question_pages_are_skipped():
     page = """<a href='/dsa/must-do-coding-questions-for-companieslike-amazon-microsoft-adobe/'>Must Do</a>
               <a href='/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/'>Arrays</a>"""
-    got = extract_links(page, "https://www.geeksforgeeks.org/dsa/dsa-tutorial-learn-data-structures-and-algorithms/")
+    got = extract_links(page, DSA_URL)
     assert got == [
-    "https://www.geeksforgeeks.org/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/"
-]
+        "https://www.geeksforgeeks.org/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/"
+    ]
+
+
+def test_category_index_pages_are_skipped():
+    page = """<a href='/dsa/advanced-data-structures/'>Advanced Data Structures</a>
+              <a href='/dsa/data-structures/'>Data Structures</a>
+              <a href='/dsa/algorithms/'>Algorithms</a>
+              <a href='/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/'>Arrays</a>"""
+    got = extract_links(page, DSA_URL)
+    assert got == [
+        "https://www.geeksforgeeks.org/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/"
+    ]

@@ -21,7 +21,7 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 CACHE_PATH = "cache/links.json"
-CACHE_VERSION = 3
+CACHE_VERSION = 4   # bumped: hub-page filtering changed, old cached link lists are invalid
 MIN_LINKS = 8
 
 SKIP_SEGMENTS = {"courses", "videos", "user", "tag", "category", "batch", "explore",
@@ -36,9 +36,16 @@ SKIP_TEXT = ("interview", "cheat sheet", "cheatsheet", "quiz", "projects", "road
              "practice questions", "mcq", "comparison of", "examples", "programs",
              "must do", "companies", "coding questions", "maang")
 
-# Parent / landing pages that are never a real "subtopic".
+# Parent / landing / category-index pages that are never a real "subtopic".
+# These pages are just lists of links to other articles (e.g. "Advanced Data Structures"
+# lists AVL, Splay, Trie...), so using one as "Day 1" gives a useless PDF section.
 HUB_SLUGS = {"devops-tutorial", "advanced-java", "nodejs", "angularjs", "java", "dbms",
-             "react", "reactjs", "php", "python"}
+             "react", "reactjs", "php", "python",
+             # DSA category index pages
+             "advanced-data-structures", "data-structures", "basic-data-structures",
+             "algorithms", "advanced-algorithms", "dsa", "dsa-tutorial",
+             "analysis-of-algorithms", "searching-algorithms", "sorting-algorithms",
+             "graph-data-structure-and-algorithms", "tree-data-structure"}
 # Slugs ending in "-tutorial(s)" are only treated as hub/landing pages when short
 # (e.g. "docker-tutorial"). Longer slugs such as
 # "introduction-to-arrays-data-structure-and-algorithm-tutorials" are real articles.
