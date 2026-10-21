@@ -8,6 +8,10 @@ max_pages: 10
 # The first one yielding >= 8 article links wins (then cached).
 # Day 1 = 1st article link on that page, Day 2 = 2nd, ...
 topics:
+  DSA:
+    - https://www.geeksforgeeks.org/dsa/dsa-tutorial-learn-data-structures-and-algorithms/
+  ML:
+    - https://www.geeksforgeeks.org/machine-learning/machine-learning-tutorial/
   System Design:
     - https://www.geeksforgeeks.org/system-design/system-design-tutorial/
   DBMS:
@@ -34,3 +38,4 @@ topics:
     - https://www.geeksforgeeks.org/angular-js/angular-tutorial/
   PHP:
     - https://www.geeksforgeeks.org/php/php-tutorial/
+  
