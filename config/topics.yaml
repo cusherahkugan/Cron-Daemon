@@ -16,27 +16,20 @@ topics:
   Python:
     - https://www.geeksforgeeks.org/python/python-programming-language-tutorial/
   React:
-    - https://www.geeksforgeeks.org/reactjs/react-tutorial/
-    - https://www.geeksforgeeks.org/reactjs/reactjs-tutorial/
-    - https://www.geeksforgeeks.org/react/react-tutorial/
+    - https://www.geeksforgeeks.org/reactjs/react/
   Spring:
     - https://www.geeksforgeeks.org/advance-java/spring-boot/
   Next.js:
     - https://www.geeksforgeeks.org/nextjs/nextjs-tutorial/
   Docker:
     - https://www.geeksforgeeks.org/devops/docker-tutorial/
-    - https://www.geeksforgeeks.org/docker/docker-tutorial/
   Kubernetes:
     - https://www.geeksforgeeks.org/devops/kubernetes-tutorial/
-    - https://www.geeksforgeeks.org/kubernetes/kubernetes-tutorial/
   Node.js:
     - https://www.geeksforgeeks.org/node-js/nodejs/
   Express.js:
     - https://www.geeksforgeeks.org/node-js/express-js/
-    - https://www.geeksforgeeks.org/node-js/expressjs/
-    - https://www.geeksforgeeks.org/node-js/expressjs-tutorial/
   Angular:
     - https://www.geeksforgeeks.org/angular-js/angular-tutorial/
   PHP:
-    - https://www.geeksforgeeks.org/php/php-tutorial/
-    - https://www.geeksforgeeks.org/php/php-tutorial-for-beginners/
+    -https://www.geeksforgeeks.org/php/php-tutorial/
