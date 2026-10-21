@@ -49,4 +49,6 @@ def test_company_question_pages_are_skipped():
     page = """<a href='/dsa/must-do-coding-questions-for-companieslike-amazon-microsoft-adobe/'>Must Do</a>
               <a href='/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/'>Arrays</a>"""
     got = extract_links(page, "https://www.geeksforgeeks.org/dsa/dsa-tutorial-learn-data-structures-and-algorithms/")
-    assert got == ["https://www.geeksforgeeks.org/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/"]
+    assert got == [
+    "https://www.geeksforgeeks.org/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/"
+]
