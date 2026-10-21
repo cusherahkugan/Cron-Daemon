@@ -30,6 +30,13 @@ jobs:
       - name: Unit tests
         run: pytest -q
 
+      # Keeps "Day N -> same subtopic" stable even if GFG reorders its tutorial page.
+      # Bump the v1 suffix (or edit topics.yaml URLs) to force a re-scrape.
+      - uses: actions/cache@v4
+        with:
+          path: cache/links.json
+          key: tutorial-links-v1
+
       - name: Generate and email PDF
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
