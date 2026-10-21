@@ -21,16 +21,18 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 CACHE_PATH = "cache/links.json"
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 MIN_LINKS = 8
 
 SKIP_SEGMENTS = {"courses", "videos", "user", "tag", "category", "batch", "explore",
                  "jobs", "contest", "puzzles", "interview-experiences", "community"}
+
 SKIP_WORDS = ("interview", "quiz", "cheat-sheet", "mcq", "projects", "roadmap", "-books",
-              "exercise", "practice", "-pdf", "complete-reference", "programming-examples")
+              "exercise", "practice", "-pdf", "complete-reference", "programming-examples",
+              "examples", "-programs", "programs", "-reference", "references")
 SKIP_TEXT = ("interview", "cheat sheet", "cheatsheet", "quiz", "projects", "roadmap",
              "companies using", "career", "complete reference", "exercises",
-             "practice questions", "mcq", "comparison of")
+             "practice questions", "mcq", "comparison of", "examples", "programs")
 
 # Parent / landing pages that are never a real "subtopic".
 HUB_SLUGS = {"devops-tutorial", "advanced-java", "nodejs", "angularjs", "java", "dbms",

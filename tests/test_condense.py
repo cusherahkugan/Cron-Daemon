@@ -34,3 +34,13 @@ def test_shared_section_requires_topic_keyword():
               <a href='/devops/kubernetes-architecture/'>k</a><a href='/devops/docker-tutorial/'>self</a>"""
     got = extract_links(page, "https://www.geeksforgeeks.org/devops/docker-tutorial/", "Docker")
     assert got == ["https://www.geeksforgeeks.org/devops/what-is-docker/"]
+    
+    
+def test_example_and_program_listing_pages_are_skipped():
+    page = """<a href='/php/php-programs/'>PHP Programs</a>
+              <a href='/php/php-examples/'>PHP Examples</a>
+              <a href='/php/php-syntax/'>PHP Syntax</a>
+              <a href='/php/php-variables/'>PHP Variables</a>"""
+    got = extract_links(page, "https://www.geeksforgeeks.org/php/php-tutorial/")
+    assert got == ["https://www.geeksforgeeks.org/php/php-syntax/",
+                   "https://www.geeksforgeeks.org/php/php-variables/"]
