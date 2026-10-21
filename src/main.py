@@ -91,7 +91,7 @@ def main():
     summary = "\n".join(f"- {s['topic']}: {s['subtopic']}\n  {s['url']}" for s in sections)
     send_mail(
         subject=f"Study Notes {today.isoformat()} (Day {day_index + 1})",
-        body=f"Good morning! Today's notes:\n\n{summary}",
+        body=f"Good morning Cusherahhh! Today's notes just 10 pagessss:\n\n{summary}",
         attachment_path=pdf_path,
     )
 
