@@ -1,11 +1,31 @@
-<<<<<<< HEAD
-# cronDaemon
-picks one subtopic per topic, collects notes, builds a PDF, emails it.
-Personal study use only.
+# CronDaemon
 
-Run locally:  python src/main.py --no-mail --day 1 --only Docker
-Tests:        pytest -q
-=======
-# Con-Daemon
-A scheduled knowledge daemon that curates technical learning topics, generates daily study guides, and delivers PDFs to your inbox overnight.
->>>>>>> 004c259079de4ce563fb668a0678d6a554f7df38
+CronDaemon is an automated study-guide generator that selects a subtopic for each technical subject, generates study notes, compiles them into a PDF, and optionally emails the guide.
+
+Designed for personal learning and daily technical revision.
+
+## Features
+
+- Selects subtopics from configured technical subjects.
+- Generates structured study notes.
+- Compiles notes into a PDF study guide.
+- Supports optional email delivery.
+- Allows running for a specific day or subject.
+
+## Usage
+
+Run locally without sending an email:
+
+```bash
+python src/main.py --no-mail --day 1 --only Docker
+```
+
+Run the test suite:
+
+```bash
+pytest -q
+```
+
+## Intended Use
+
+For personal educational use. Ensure that external references and source materials are used in accordance with their licenses and terms of service.
