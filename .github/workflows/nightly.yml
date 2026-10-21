@@ -1,0 +1,50 @@
+name: cronDaemon Nightly Notes
+
+on:
+  schedule:
+    - cron: "30 20 * * *"     # 20:30 UTC = 02:00 AM Sri Lanka (UTC+5:30)
+  workflow_dispatch:
+    inputs:
+      day:
+        description: "Force day number (optional, e.g. 1)"
+        required: false
+        default: ""
+
+jobs:
+  build-and-send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: System libs for WeasyPrint
+        run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 fonts-dejavu
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Unit tests
+        run: pytest -q
+
+      - name: Generate and email PDF
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+        run: |
+          if [ -n "${{ github.event.inputs.day }}" ]; then
+            python src/main.py --day ${{ github.event.inputs.day }}
+          else
+            python src/main.py
+          fi
+
+      - uses: actions/upload-artifact@v4   # backup copy if the email fails
+        if: always()
+        with:
+          name: notes-pdf
+          path: output/*.pdf
+          retention-days: 7

@@ -1,0 +1,92 @@
+start_date: "2026-10-22"        # Day 1
+timezone: "Asia/Colombo"        # used to decide what "today" is
+articles_per_subtopic: 3
+
+topics:
+  System Design:
+    - Monolithic Architecture
+    - Microservices Architecture
+    - Load Balancer
+    - Caching
+    - API Gateway
+    - CAP Theorem
+    - Database Sharding
+  DBMS:
+    - NoSQL Databases
+    - Relational Model and RDBMS
+    - Normalization
+    - ACID Properties
+    - Indexing in DBMS
+    - Transactions and Concurrency Control
+  Java:
+    - Multithreading in Java
+    - OOP Concepts in Java
+    - Java Collections Framework
+    - Exception Handling in Java
+    - Java Streams API
+    - JVM Architecture
+  Python:
+    - Python Decorators
+    - Python OOP
+    - Python Generators
+    - Python Lists and Tuples
+    - Python Multithreading
+    - Python File Handling
+  React:
+    - React Components
+    - React Hooks
+    - React useEffect
+    - React Context API
+    - React Router
+    - Redux in React
+  Spring:
+    - Spring Framework Introduction
+    - Spring Dependency Injection
+    - Spring Boot
+    - Spring Data JPA
+    - Spring Security
+    - Spring REST API
+  Next.js:
+    - Next.js Introduction
+    - Next.js Routing
+    - Next.js Server Side Rendering
+    - Next.js API Routes
+    - Next.js Data Fetching
+  Docker:
+    - Docker Introduction
+    - Docker Images and Containers
+    - Dockerfile
+    - Docker Compose
+    - Docker Networking
+    - Docker Volumes
+  Kubernetes:
+    - Kubernetes Introduction
+    - Kubernetes Pods
+    - Kubernetes Deployments
+    - Kubernetes Services
+    - Kubernetes ConfigMaps and Secrets
+  Node.js:
+    - Node.js Introduction
+    - Node.js Event Loop
+    - Node.js Modules
+    - Node.js Streams
+    - Node.js File System
+  Express.js:
+    - Express.js Introduction
+    - Express.js Routing
+    - Express.js Middleware
+    - Express.js Error Handling
+    - Express.js Authentication
+  Angular:
+    - Angular Components
+    - Angular Directives
+    - Angular Services and Dependency Injection
+    - Angular Routing
+    - Angular Forms
+  PHP:
+    - PHP Introduction
+    - PHP Functions
+    - PHP Arrays
+    - PHP OOP
+    - PHP MySQL
+    - PHP Sessions and Cookies
