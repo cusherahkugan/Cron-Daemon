@@ -29,10 +29,12 @@ SKIP_SEGMENTS = {"courses", "videos", "user", "tag", "category", "batch", "explo
 
 SKIP_WORDS = ("interview", "quiz", "cheat-sheet", "mcq", "projects", "roadmap", "-books",
               "exercise", "practice", "-pdf", "complete-reference", "programming-examples",
-              "examples", "-programs", "programs", "-reference", "references")
+              "examples", "-programs", "programs", "-reference", "references",
+              "must-do", "questions", "for-companies", "companies", "asked-in", "-sheet")
 SKIP_TEXT = ("interview", "cheat sheet", "cheatsheet", "quiz", "projects", "roadmap",
              "companies using", "career", "complete reference", "exercises",
-             "practice questions", "mcq", "comparison of", "examples", "programs")
+             "practice questions", "mcq", "comparison of", "examples", "programs",
+             "must do", "companies", "coding questions", "maang")
 
 # Parent / landing pages that are never a real "subtopic".
 HUB_SLUGS = {"devops-tutorial", "advanced-java", "nodejs", "angularjs", "java", "dbms",
