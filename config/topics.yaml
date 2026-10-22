@@ -1,4 +1,4 @@
-start_date: "2026-10-22"        # Day 1
+start_date: "2026-10-23"        # Day 1
 timezone: "Asia/Colombo"
 # Target page count. The PDF shrinks the font (down to 5pt) to fit this.
 # If it still doesn't fit, extra pages are added - nothing is ever cut.
@@ -35,7 +35,7 @@ topics:
   Express.js:
     - https://www.geeksforgeeks.org/node-js/express-js/
   Angular:
-    - https://www.geeksforgeeks.org/angular-js/angular-tutorial/
+    - https://www.geeksforgeeks.org/angular-js/angularjs/
   PHP:
     - https://www.geeksforgeeks.org/php/php-tutorial/
   
