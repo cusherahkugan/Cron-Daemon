@@ -8,7 +8,7 @@ _JUNK = re.compile(r"^(?:last updated|comment|improve|suggest changes|share your
 _KEEP_ATTRS = {"colspan", "rowspan"}
 
 
-def full_content(raw_html: str, embed=None, max_images: int = 15) -> str:
+def full_content(raw_html: str, embed=None, max_images: int = 200) -> str:
     """Clean an article for the PDF WITHOUT shortening it: every heading, paragraph,
     list, code block and table is kept. Only site junk is removed, links are flattened
     to plain text, and images are embedded (or dropped when they can't be)."""

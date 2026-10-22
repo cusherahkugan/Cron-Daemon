@@ -22,47 +22,35 @@ def test_junk_removed_real_text_kept():
     assert "Last updated" not in out and "Real text here." in out
 
 
-def test_extract_links_keeps_section_order():
-    page = """<a href='/docker/what-is-docker/'>a</a><a href='/docker/dockerfile/#x'>b</a>
-              <a href='/docker/what-is-docker/'>dup</a><a href='/java/oop/'>other</a>
-              <a href='/docker/docker-interview-questions/'>skip</a><a href='/docker/docker-tutorial/'>self</a>"""
-    got = extract_links(page, "https://www.geeksforgeeks.org/docker/docker-tutorial/")
-    assert got == ["https://www.geeksforgeeks.org/docker/what-is-docker/",
-                   "https://www.geeksforgeeks.org/docker/dockerfile/"]
+PAGE_ML = """
+<header><a href='/courses/x/'>menu</a></header>
+<ul><li><a href='/machine-learning/python-for-machine-learning/'>nav</a></li></ul>
+<h1>Machine Learning Tutorial</h1>
+<h2>Module 1</h2>
+<ul><li><a href='/machine-learning/introduction-machine-learning/'>Introduction</a></li>
+<li><a href='/artificial-intelligence/ai-vs-ml/'>AI vs ML</a></li>
+<li><a href='/machine-learning/introduction-machine-learning/#x'>dup</a></li></ul>
+<h2>Module 2</h2>
+<ul><li><a href='/python/introduction-to-python/'>Python</a></li>
+<li><a href='/machine-learning/machine-learning-interview-questions/'>Interview</a></li>
+<li><a href='/courses/ds/'>course</a></li>
+<li><a href='/machine-learning/machine-learning-tutorial/'>self</a></li></ul>
+<h3>Explore</h3>
+<ul><li><a href='/machine-learning/types-of-machine-learning/'>Types</a></li></ul>
+"""
+ML_URL = "https://www.geeksforgeeks.org/machine-learning/machine-learning-tutorial/"
 
 
-def test_shared_section_requires_topic_keyword():
-    page = """<a href='/devops/devops-tutorial/'>hub</a><a href='/devops/what-is-docker/'>a</a>
-              <a href='/devops/kubernetes-architecture/'>k</a><a href='/devops/docker-tutorial/'>self</a>"""
-    got = extract_links(page, "https://www.geeksforgeeks.org/devops/docker-tutorial/", "Docker")
-    assert got == ["https://www.geeksforgeeks.org/devops/what-is-docker/"]
-
-
-def test_example_and_program_listing_pages_are_skipped():
-    page = """<a href='/php/php-programs/'>PHP Programs</a>
-              <a href='/php/php-examples/'>PHP Examples</a>
-              <a href='/php/php-syntax/'>PHP Syntax</a>
-              <a href='/php/php-variables/'>PHP Variables</a>"""
-    got = extract_links(page, "https://www.geeksforgeeks.org/php/php-tutorial/")
-    assert got == ["https://www.geeksforgeeks.org/php/php-syntax/",
-                   "https://www.geeksforgeeks.org/php/php-variables/"]
-
-
-def test_company_question_pages_are_skipped():
-    page = """<a href='/dsa/must-do-coding-questions-for-companieslike-amazon-microsoft-adobe/'>Must Do</a>
-              <a href='/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/'>Arrays</a>"""
-    got = extract_links(page, DSA_URL)
+def test_links_follow_page_order_from_first_to_last():
+    got = extract_links(PAGE_ML, ML_URL)
     assert got == [
-        "https://www.geeksforgeeks.org/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/"
+        "https://www.geeksforgeeks.org/machine-learning/introduction-machine-learning/",
+        "https://www.geeksforgeeks.org/artificial-intelligence/ai-vs-ml/",
+        "https://www.geeksforgeeks.org/python/introduction-to-python/",
+        "https://www.geeksforgeeks.org/machine-learning/machine-learning-interview-questions/",
     ]
 
 
-def test_category_index_pages_are_skipped():
-    page = """<a href='/dsa/advanced-data-structures/'>Advanced Data Structures</a>
-              <a href='/dsa/data-structures/'>Data Structures</a>
-              <a href='/dsa/algorithms/'>Algorithms</a>
-              <a href='/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/'>Arrays</a>"""
-    got = extract_links(page, DSA_URL)
-    assert got == [
-        "https://www.geeksforgeeks.org/dsa/introduction-to-arrays-data-structure-and-algorithm-tutorials/"
-    ]
+def test_menu_before_title_and_sidebar_after_body_are_ignored():
+    got = extract_links(PAGE_ML, ML_URL)
+    assert not any("python-for-machine-learning" in u or "types-of-machine-learning" in u for u in got)

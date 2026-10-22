@@ -1,5 +1,4 @@
 import html as h
-import re
 
 from weasyprint import HTML
 
@@ -8,7 +7,7 @@ from scrape import embed_image
 
 PAGE_MARGIN_MM = 4
 FONT_SIZES = [7.5, 7.0, 6.6, 6.2, 5.8, 5.4, 5.0]   # tried largest first
-TWO_COL_MAX_CHARS = 9000                            # small content -> 2 columns, else 3
+COLUMNS = 2                                         # always 2 columns
 
 
 def _css(fs: float) -> str:
@@ -31,7 +30,7 @@ pre {{ background: #f4f4f4; padding: 2px 3px; margin: 2px 0; white-space: pre-wr
       word-wrap: break-word; font-family: "DejaVu Sans Mono", monospace; font-size: {fs * 0.88:.2f}pt;
       line-height: 1.2; border-left: 2px solid #999; break-inside: auto; }}
 code {{ font-family: "DejaVu Sans Mono", monospace; font-size: {fs * 0.9:.2f}pt; }}
-img {{ display: block; max-width: 100%; height: auto; max-height: 45mm; margin: 2px auto; }}
+img {{ display: block; max-width: 100%; height: auto; max-height: 80mm; margin: 2px auto; }}
 table {{ border-collapse: collapse; width: 100%; table-layout: fixed; margin: 2px 0; font-size: {fs * 0.92:.2f}pt; }}
 tr {{ break-inside: avoid; }}
 td, th {{ border: 0.4pt solid #aaa; padding: 0 2px; overflow-wrap: break-word; word-wrap: break-word; vertical-align: top; }}
@@ -56,20 +55,17 @@ def _render(date_str: str, sections: list[dict], bodies: list[str], cols: int, f
 
 
 def build_pdf(date_str: str, sections: list[dict], out_path: str, max_pages: int = 6) -> int:
-    """Full articles, never trimmed. Picks 2 columns for small content and 3 for larger
-    content, then shrinks the font until the PDF fits max_pages. If even the smallest
+    """Full articles, never trimmed. Always uses 2 columns, then shrinks the font until the PDF fits max_pages. If even the smallest
     font doesn't fit, extra pages are added (nothing is hidden or cut)."""
     bodies = [
         full_content(s.get("html", ""),
                      embed=lambda src, base=s.get("url", ""): embed_image(src, base))
         for s in sections
     ]
-    total = sum(len(re.sub(r"<[^>]+>", "", b)) for b in bodies)
 
     doc = None
     for fs in FONT_SIZES:
-        cols = 2 if (total <= TWO_COL_MAX_CHARS and fs >= 6.2) else 3
-        doc = HTML(string=_render(date_str, sections, bodies, cols, fs)).render()
+        doc = HTML(string=_render(date_str, sections, bodies, COLUMNS, fs)).render()
         if len(doc.pages) <= max_pages:
             break
     doc.write_pdf(out_path)

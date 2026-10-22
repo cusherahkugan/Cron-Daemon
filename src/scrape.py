@@ -21,45 +21,11 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 CACHE_PATH = "cache/links.json"
-CACHE_VERSION = 5   # bumped: language-specific DSA pages are now skipped, old cached link lists are invalid
+CACHE_VERSION = 6   # bumped: links are now every article link of the tutorial body, in page order
 MIN_LINKS = 8
 
 SKIP_SEGMENTS = {"courses", "videos", "user", "tag", "category", "batch", "explore",
                  "jobs", "contest", "puzzles", "interview-experiences", "community"}
-
-SKIP_WORDS = ("interview", "quiz", "cheat-sheet", "mcq", "projects", "roadmap", "-books",
-              "exercise", "practice", "-pdf", "complete-reference", "programming-examples",
-              "examples", "-programs", "programs", "-reference", "references",
-              "must-do", "questions", "for-companies", "companies", "asked-in", "-sheet")
-SKIP_TEXT = ("interview", "cheat sheet", "cheatsheet", "quiz", "projects", "roadmap",
-             "companies using", "career", "complete reference", "exercises",
-             "practice questions", "mcq", "comparison of", "examples", "programs",
-             "must do", "companies", "coding questions", "maang")
-
-# Parent / landing / category-index pages that are never a real "subtopic".
-# These pages are just lists of links to other articles (e.g. "Advanced Data Structures"
-# lists AVL, Splay, Trie...), so using one as "Day 1" gives a useless PDF section.
-HUB_SLUGS = {"devops-tutorial", "advanced-java", "nodejs", "angularjs", "java", "dbms",
-             "react", "reactjs", "php", "python",
-             # DSA category index pages
-             "advanced-data-structures", "data-structures", "basic-data-structures",
-             "algorithms", "advanced-algorithms", "dsa", "dsa-tutorial",
-             "analysis-of-algorithms", "searching-algorithms", "sorting-algorithms",
-             "graph-data-structure-and-algorithms", "tree-data-structure"}
-# Slugs ending in "-tutorial(s)" are only treated as hub/landing pages when short
-# (e.g. "docker-tutorial"). Longer slugs such as
-# "introduction-to-arrays-data-structure-and-algorithm-tutorials" are real articles.
-HUB_MAX_WORDS = 3
-# Extra words that count as a match for a topic keyword.
-KEYWORD_ALIASES = {"kubernetes": ("kubernetes", "k8s")}
-
-# The DSA landing page also links to "DSA in <language>" pages (e.g.
-# "python-data-structures-and-algorithms"). Those are language tours, not DSA subtopics,
-# so they are skipped inside the dsa section only (other sections like Spring/Java
-# legitimately have "java" in their slugs).
-LANG_WORDS = {"python", "java", "cpp", "c", "javascript", "js", "csharp", "go", "kotlin",
-              "php", "ruby", "swift", "rust", "scala", "r", "typescript"}
-
 
 def _get(url: str, tries: int = 2) -> str | None:
     for attempt in range(tries):
@@ -85,63 +51,42 @@ def _slug(s: str) -> str:
     return re.sub(r"[^a-z0-9]", "", s.lower())
 
 
-def _keyword(topic: str) -> str:
-    """'Docker' -> 'docker', 'Express.js' -> 'express', 'Node.js' -> 'node'."""
-    k = _slug(topic)
-    return k[:-2] if k.endswith("js") and len(k) > 4 else k
-
-
-def _is_hub(slug: str) -> bool:
-    slug = slug.lower()
-    if slug in HUB_SLUGS:
-        return True
-    return (slug.endswith(("-tutorial", "-tutorials"))
-            and len(slug.split("-")) <= HUB_MAX_WORDS)
-
-
-def _is_language_page(slug: str) -> bool:
-    """True when a slug is a language-specific page, e.g. 'python-data-structures-and-algorithms'."""
-    return bool(LANG_WORDS & set(re.split(r"[^a-z0-9]+", slug.lower())))
-
-
 # --------------------------------------------------------------------------- links
 def extract_links(page_html: str, tutorial_url: str, topic: str | None = None) -> list[str]:
-    """Ordered, de-duplicated article links that belong to the same tutorial section.
+    """Every article link in the tutorial page's own body, in page order (first -> last).
 
-    When several topics share one GFG section (Docker/Kubernetes in /devops/, Express in
-    /node-js/, Spring in /advance-java/) the link slug must contain the topic keyword, so
-    the parent hub page is never picked as 'Day 1'."""
+    Only the region between the page <h1> and the "Explore" sidebar is read, so the site
+    menu (before the title) and the sidebar/footer (after the body) never leak in. Links to
+    other GFG sections are kept - a tutorial like ML links to Python, Maths, etc. and every
+    one of them is a day. Only duplicates, the page itself and non-article URLs
+    (courses, videos, tags ...) are dropped. `topic` is unused, kept for compatibility."""
     tree = lh.fromstring(page_html)
     tree.make_links_absolute(tutorial_url)
-    for bad in tree.xpath("//footer | //header | //nav | //aside"):
+    for bad in tree.xpath("//footer | //header | //nav | //script | //style"):
         bad.drop_tree()
-    section = urlparse(tutorial_url).path.strip("/").split("/")[0]
     self_url = _norm(tutorial_url)
 
-    kw = _keyword(topic) if topic else ""
-    kws = KEYWORD_ALIASES.get(kw, (kw,)) if kw else ()
-    need_kw = bool(kws) and not _slug(section).startswith(kw)
-
+    started = not tree.xpath("//h1")          # no <h1> -> read the whole page
     links: list[str] = []
-    for a in tree.xpath("//a[@href]"):
-        href = a.get("href")
-        p = urlparse(href)
-        if not p.netloc.endswith("geeksforgeeks.org"):
+    for el in tree.iter():
+        if not isinstance(el.tag, str):
             continue
-        segs = p.path.strip("/").split("/")
-        if len(segs) < 2 or segs[0] in SKIP_SEGMENTS or segs[0] != section:
+        if el.tag == "h1":
+            started = True
             continue
-        last = segs[-1].lower()
-        if any(w in last for w in SKIP_WORDS) or _is_hub(last):
+        if not started:
             continue
-        if section == "dsa" and _is_language_page(last):
+        if el.tag in ("h2", "h3", "h4") and el.text_content().strip().lower() == "explore":
+            break
+        if el.tag != "a" or not el.get("href"):
             continue
-        if need_kw and not any(k in _slug(last) for k in kws):
+        p = urlparse(el.get("href"))
+        if p.netloc not in ("www.geeksforgeeks.org", "geeksforgeeks.org"):
             continue
-        text = " ".join(a.text_content().split()).lower()
-        if any(w in text for w in SKIP_TEXT):
+        segs = [x for x in p.path.split("/") if x]
+        if len(segs) < 2 or segs[0] in SKIP_SEGMENTS:
             continue
-        n = _norm(href)
+        n = _norm(el.get("href"))
         if n != self_url and n not in links:
             links.append(n)
     return links
@@ -206,7 +151,7 @@ def resolve_topic(topic: str, pinned: list[str], search_fn, cache_path: str = CA
 
 
 # ------------------------------------------------------------------------- images
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=1024)
 def embed_image(src: str | None, base: str = "") -> str | None:
     """Download an image, shrink it, return a data: URI (so the PDF is self-contained)."""
     if not src:
