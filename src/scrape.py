@@ -21,7 +21,7 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
 }
 CACHE_PATH = "cache/links.json"
-CACHE_VERSION = 4   # bumped: hub-page filtering changed, old cached link lists are invalid
+CACHE_VERSION = 5   # bumped: language-specific DSA pages are now skipped, old cached link lists are invalid
 MIN_LINKS = 8
 
 SKIP_SEGMENTS = {"courses", "videos", "user", "tag", "category", "batch", "explore",
@@ -52,6 +52,13 @@ HUB_SLUGS = {"devops-tutorial", "advanced-java", "nodejs", "angularjs", "java", 
 HUB_MAX_WORDS = 3
 # Extra words that count as a match for a topic keyword.
 KEYWORD_ALIASES = {"kubernetes": ("kubernetes", "k8s")}
+
+# The DSA landing page also links to "DSA in <language>" pages (e.g.
+# "python-data-structures-and-algorithms"). Those are language tours, not DSA subtopics,
+# so they are skipped inside the dsa section only (other sections like Spring/Java
+# legitimately have "java" in their slugs).
+LANG_WORDS = {"python", "java", "cpp", "c", "javascript", "js", "csharp", "go", "kotlin",
+              "php", "ruby", "swift", "rust", "scala", "r", "typescript"}
 
 
 def _get(url: str, tries: int = 2) -> str | None:
@@ -92,6 +99,11 @@ def _is_hub(slug: str) -> bool:
             and len(slug.split("-")) <= HUB_MAX_WORDS)
 
 
+def _is_language_page(slug: str) -> bool:
+    """True when a slug is a language-specific page, e.g. 'python-data-structures-and-algorithms'."""
+    return bool(LANG_WORDS & set(re.split(r"[^a-z0-9]+", slug.lower())))
+
+
 # --------------------------------------------------------------------------- links
 def extract_links(page_html: str, tutorial_url: str, topic: str | None = None) -> list[str]:
     """Ordered, de-duplicated article links that belong to the same tutorial section.
@@ -121,6 +133,8 @@ def extract_links(page_html: str, tutorial_url: str, topic: str | None = None) -
             continue
         last = segs[-1].lower()
         if any(w in last for w in SKIP_WORDS) or _is_hub(last):
+            continue
+        if section == "dsa" and _is_language_page(last):
             continue
         if need_kw and not any(k in _slug(last) for k in kws):
             continue
@@ -294,6 +308,20 @@ def _restore_code(article_html: str, blocks: list[str]) -> str:
     return _TOKEN_RE.sub(sub, article_html)
 
 
+def _clean_title(page: str, url: str) -> str:
+    """Page title, ignoring template placeholders such as '%%title%%'."""
+    meta = trafilatura.extract_metadata(page)
+    title = (meta.title or "").strip() if meta and meta.title else ""
+    if not title or "%%" in title:
+        try:
+            title = " ".join(lh.fromstring(page).xpath("string(//h1)").split())
+        except Exception:
+            title = ""
+    if not title or "%%" in title:
+        title = url.rstrip("/").rsplit("/", 1)[-1].replace("-", " ").title()
+    return re.sub(r"\s*[-|–]\s*GeeksforGeeks\s*$", "", title).strip()
+
+
 def fetch_article(url: str) -> dict | None:
     page = _get(url)
     if not page:
@@ -313,8 +341,6 @@ def fetch_article(url: str) -> dict | None:
     if not md:
         print(f"  no content extracted from {url}")
         return None
-    meta = trafilatura.extract_metadata(page)
-    title = meta.title if meta and meta.title else url
-    title = re.sub(r"\s*[-|–]\s*GeeksforGeeks\s*$", "", title).strip()
+    title = _clean_title(page, url)
     body = markdown.markdown(md, extensions=["fenced_code", "tables"])
     return {"title": title, "url": url, "html": _restore_code(body, blocks)}
