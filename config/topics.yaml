@@ -3,6 +3,8 @@ timezone: "Asia/Colombo"
 # Target page count. The PDF shrinks the font (down to 5pt) to fit this.
 # If it still doesn't fit, extra pages are added - nothing is ever cut.
 max_pages: 10
+slides_min: 5
+slides_max: 60
 
 # Each topic = list of candidate GFG tutorial-landing URLs, tried in order.
 # The first one yielding >= 8 article links wins (then cached).

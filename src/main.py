@@ -5,15 +5,17 @@ from dotenv import load_dotenv
 
 from config import get_day_index, load_config, pick_subtopics, today_in_tz
 from pdf_builder import build_pdf
+from pptx_builder import build_pptx
 from scrape import CACHE_PATH, fetch_article, resolve_topic
 from search import find_tutorial_urls
 
 
 def parse_args():
-    p = argparse.ArgumentParser(description="cronDaemon: nightly GFG notes -> PDF -> email")
+    p = argparse.ArgumentParser(description="cronDaemon: nightly GFG notes -> PDF + lecture slides -> email")
     p.add_argument("--day", type=int, help="force a day number (1 = first day) instead of using the date")
     p.add_argument("--only", help="only process this topic, e.g. --only Docker")
-    p.add_argument("--no-mail", action="store_true", help="build the PDF but do not send email")
+    p.add_argument("--no-mail", action="store_true", help="build the PDF/slides but do not send email")
+    p.add_argument("--no-slides", action="store_true", help="skip the lecture slides (.pptx)")
     p.add_argument("--list", action="store_true", help="print resolved tutorial pages + first subtopics, then exit")
     p.add_argument("--refresh", action="store_true", help="delete cache/links.json and re-resolve everything")
     return p.parse_args()
@@ -82,6 +84,17 @@ def main():
     pages = build_pdf(today.isoformat(), sections, pdf_path, cfg.get("max_pages", 6))
     print(f"PDF saved: {pdf_path} ({pages} pages)")
 
+    attachments = [pdf_path]
+    if not args.no_slides:
+        pptx_path = f"output/lecture_{today.isoformat()}.pptx"
+        try:
+            slides = build_pptx(today.isoformat(), sections, pptx_path,
+                                cfg.get("slides_min", 50), cfg.get("slides_max", 60))
+            print(f"Slides saved: {pptx_path} ({slides} slides)")
+            attachments.append(pptx_path)
+        except Exception as e:  # never let the slides stop the PDF email
+            print(f"Slides failed, sending PDF only: {e}")
+
     if args.no_mail:
         print("--no-mail set, skipping email.")
         return
@@ -89,10 +102,11 @@ def main():
     from mailer import send_mail
 
     summary = "\n".join(f"- {s['topic']}: {s['subtopic']}\n  {s['url']}" for s in sections)
+    extra = "\nLecture slides (.pptx) attached too." if len(attachments) > 1 else ""
     send_mail(
         subject=f"Study Notes {today.isoformat()} (Day {day_index + 1})",
-        body=f"Good morning Cusherahhh! Today's notes just 10 pagessss:\n\n{summary}",
-        attachment_path=pdf_path,
+        body=f"Good morning Cusherahhh! Today's notes just 10 pagessss:{extra}\n\n{summary}",
+        attachments=attachments,
     )
 
 

@@ -41,7 +41,7 @@ jobs:
           restore-keys: |
             tutorial-links-${{ hashFiles('config/topics.yaml', 'src/scrape.py') }}-
 
-      - name: Generate and email PDF
+      - name: Generate and email PDF + lecture slides
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
@@ -54,9 +54,11 @@ jobs:
             python src/main.py
           fi
 
-      - uses: actions/upload-artifact@v4   # backup copy if the email fails
+      - uses: actions/upload-artifact@v4   # backup copy (PDF + slides) if the email fails
         if: always()
         with:
-          name: notes-pdf
-          path: output/*.pdf
+          name: notes
+          path: |
+            output/*.pdf
+            output/*.pptx
           retention-days: 7
