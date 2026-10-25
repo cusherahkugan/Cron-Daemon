@@ -1,4 +1,4 @@
-start_date: "2026-10-23"        # Day 1
+start_date: "2026-10-26"        # Day 1
 timezone: "Asia/Colombo"
 # Target page count. The PDF shrinks the font (down to 5pt) to fit this.
 # If it still doesn't fit, extra pages are added - nothing is ever cut.
