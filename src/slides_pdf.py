@@ -1,6 +1,6 @@
 from weasyprint import HTML
+from bundle import build_parts
 
-from bundle import chapters_html, cover_html
 
 CSS = """
 @page {
@@ -46,9 +46,7 @@ tr:nth-child(even) td { background: #f7f7f7; }
 """
 
 
-def build_slides_pdf(date_str: str, topic: str, day_label: str, chapters: list[dict], out_path: str) -> int:
-    body = cover_html(topic, date_str, day_label, chapters) + chapters_html(chapters)
-    doc = HTML(string=f"<html><head><meta charset='utf-8'><style>{CSS}</style></head>"
-                      f"<body>{body}</body></html>").render()
-    doc.write_pdf(out_path)
-    return len(doc.pages)
+def build_slides_pdf(date_str: str, topic: str, day_label: str, chapters: list[dict],
+                     out_stem: str, max_pages: int = 500) -> list[tuple[str, int]]:
+    """Landscape slide-style PDF(s). `out_stem` has no extension. Returns [(path, pages)]."""
+    return build_parts(CSS, topic, date_str, day_label, chapters, out_stem, max_pages)

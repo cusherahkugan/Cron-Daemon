@@ -110,16 +110,16 @@ def main():
     d = today.isoformat()
     attachments: list[str] = []
 
+    limit = int(cfg.get("max_pages_per_file", 500))
+
     if not args.no_a4:
-        p = f"{stem}_notes_A4.pdf"
-        n = build_pdf(d, topic, day_label, chapters, p)
-        print(f"A4 PDF: {p} ({n} pages)")
-        attachments.append(p)
+        for p, n in build_pdf(d, topic, day_label, chapters, f"{stem}_notes_A4", limit):
+            print(f"A4 PDF: {p} ({n} pages)")
+            attachments.append(p)
     if not args.no_slides:
-        p = f"{stem}_slides.pdf"
-        n = build_slides_pdf(d, topic, day_label, chapters, p)
-        print(f"Slides PDF: {p} ({n} pages)")
-        attachments.append(p)
+        for p, n in build_slides_pdf(d, topic, day_label, chapters, f"{stem}_slides", limit):
+            print(f"Slides PDF: {p} ({n} pages)")
+            attachments.append(p)
 
     if args.no_mail:
         print("--no-mail set, skipping email.")
