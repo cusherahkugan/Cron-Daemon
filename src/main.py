@@ -1,23 +1,28 @@
 import argparse
 import os
+import re
 
 from dotenv import load_dotenv
 
-from config import get_day_index, load_config, pick_subtopics, today_in_tz
+from bundle import build_chapters
+from config import get_day_index, load_config, today_in_tz
 from pdf_builder import build_pdf
 from scrape import CACHE_PATH, fetch_article, resolve_topic
 from search import find_tutorial_urls
 from slides_pdf import build_slides_pdf
 
+MAX_MAIL_MB = 23   # Gmail's limit is 25 MB including encoding overhead
+
 
 def parse_args():
-    p = argparse.ArgumentParser(description="cronDaemon: nightly GFG notes -> PDF + slide-style PDF -> email")
-    p.add_argument("--day", type=int, help="force a day number (1 = first day) instead of using the date")
-    p.add_argument("--only", help="only process this topic, e.g. --only Docker")
-    p.add_argument("--no-mail", action="store_true", help="build the PDF/slides but do not send email")
-    p.add_argument("--no-slides", action="store_true", help="skip the slide-style PDF (landscape, full content)")
-    p.add_argument("--list", action="store_true", help="print resolved tutorial pages + first subtopics, then exit")
-    p.add_argument("--refresh", action="store_true", help="delete cache/links.json and re-resolve everything")
+    p = argparse.ArgumentParser(description="cronDaemon: one tech stack per day -> full-notes PDFs -> email")
+    p.add_argument("--day", type=int, help="force a day number (1 = first topic)")
+    p.add_argument("--only", help="build this topic regardless of the day, e.g. --only Docker")
+    p.add_argument("--no-mail", action="store_true", help="build PDFs but do not send email")
+    p.add_argument("--no-slides", action="store_true", help="skip the landscape slide-style PDF")
+    p.add_argument("--no-a4", action="store_true", help="skip the A4 PDF")
+    p.add_argument("--list", action="store_true", help="print the day -> topic plan, then exit")
+    p.add_argument("--refresh", action="store_true", help="delete cache/links.json and re-resolve")
     return p.parse_args()
 
 
@@ -25,6 +30,19 @@ def _as_list(v) -> list[str]:
     if not v:
         return []
     return [v] if isinstance(v, str) else list(v)
+
+
+def _flag_finished() -> None:
+    """Tell the GitHub workflow that every topic is done, so it can disable itself."""
+    print("ALL TOPICS DONE - workflow will be disabled.")
+    path = os.environ.get("GITHUB_OUTPUT")
+    if path:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write("finished=true\n")
+
+
+def _slug(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
 
 
 def main():
@@ -36,77 +54,103 @@ def main():
         print("cache cleared")
 
     cfg = load_config()
+    topics: dict = cfg["topics"]
+    names = list(topics)
     today = today_in_tz(cfg.get("timezone", "Asia/Colombo"))
-    day_index = args.day - 1 if args.day else get_day_index(cfg["start_date"], today)
-
-    if day_index < 0 and not args.list:
-        print(f"Nothing to do: today is before start_date {cfg['start_date']}.")
-        return
-
-    # topic -> ordered list of article URLs from its GFG tutorial page (each link = one subtopic)
-    tutorial_links: dict[str, list[str]] = {}
-    for topic, pinned in cfg["topics"].items():
-        if args.only and args.only.lower() != topic.lower():
-            continue
-        res = resolve_topic(topic, _as_list(pinned), find_tutorial_urls)
-        if not res:
-            print(f"[{topic}] no tutorial page found, skipping")
-            continue
-        url, links = res
-        print(f"[{topic}] tutorial page: {url} ({len(links)} subtopics)")
-        tutorial_links[topic] = links
 
     if args.list:
-        for topic, links in tutorial_links.items():
-            print(f"\n== {topic} ==")
-            for i, u in enumerate(links[:12], 1):
-                print(f"  Day {i:>2}: {u}")
+        for i, n in enumerate(names, 1):
+            print(f"Day {i:>2}: {n}")
         return
 
-    picks = pick_subtopics(tutorial_links, day_index, args.only)
-    if not picks:
-        print(f"Nothing to do for day {day_index + 1} (all subtopics finished).")
-        return
+    if args.only:
+        match = [n for n in names if n.lower() == args.only.lower()]
+        if not match:
+            print(f"Unknown topic {args.only!r}. Known: {', '.join(names)}")
+            return
+        topic = match[0]
+        day_index = names.index(topic)
+    else:
+        day_index = args.day - 1 if args.day else get_day_index(cfg["start_date"], today)
+        if day_index < 0:
+            print(f"Nothing to do: today is before start_date {cfg['start_date']}.")
+            return
+        if day_index >= len(names):
+            _flag_finished()
+            return
+        topic = names[day_index]
 
-    sections = []
-    for topic, article_url in picks:
-        print(f"[{topic}] -> {article_url}")
-        art = fetch_article(article_url) or fetch_article(article_url)  # one retry
-        sections.append({
-            "topic": topic,
-            "subtopic": art["title"] if art else article_url,
-            "url": article_url,
-            "html": art["html"] if art else "",
-        })
+    is_last_day = day_index == len(names) - 1
+    day_label = f"Day {day_index + 1} of {len(names)}"
+    print(f"== {day_label}: {topic} ==")
+
+    res = resolve_topic(topic, _as_list(topics[topic]), find_tutorial_urls)
+    if not res:
+        raise SystemExit(f"[{topic}] no tutorial page found")
+    tutorial_url, links = res
+    print(f"[{topic}] {tutorial_url} -> {len(links)} articles")
+
+    articles, failed = [], []
+    for i, url in enumerate(links, 1):
+        print(f"  ({i}/{len(links)}) {url}")
+        art = fetch_article(url) or fetch_article(url)   # one retry
+        if art:
+            articles.append(art)
+        else:
+            failed.append(url)
+
+    chapters = build_chapters(articles)
+    if not chapters:
+        raise SystemExit(f"[{topic}] no content could be fetched")
+    if failed:
+        print(f"WARNING: {len(failed)} articles failed:\n  " + "\n  ".join(failed))
 
     os.makedirs("output", exist_ok=True)
-    pdf_path = f"output/notes_{today.isoformat()}.pdf"
-    pages = build_pdf(today.isoformat(), sections, pdf_path, cfg.get("max_pages", 6))
-    print(f"PDF saved: {pdf_path} ({pages} pages)")
+    stem = f"output/{day_index + 1:02d}_{_slug(topic)}_{today.isoformat()}"
+    d = today.isoformat()
+    attachments: list[str] = []
 
-    attachments = [pdf_path]
+    if not args.no_a4:
+        p = f"{stem}_notes_A4.pdf"
+        n = build_pdf(d, topic, day_label, chapters, p)
+        print(f"A4 PDF: {p} ({n} pages)")
+        attachments.append(p)
     if not args.no_slides:
-        slides_path = f"output/slides_{today.isoformat()}.pdf"
-        try:
-            slide_pages = build_slides_pdf(today.isoformat(), sections, slides_path)
-            print(f"Slide-style PDF saved: {slides_path} ({slide_pages} pages)")
-            attachments.append(slides_path)
-        except Exception as e:  # never let this stop the main PDF email
-            print(f"Slide-style PDF failed, sending the notes PDF only: {e}")
+        p = f"{stem}_slides.pdf"
+        n = build_slides_pdf(d, topic, day_label, chapters, p)
+        print(f"Slides PDF: {p} ({n} pages)")
+        attachments.append(p)
 
     if args.no_mail:
         print("--no-mail set, skipping email.")
-        return
+    else:
+        from mailer import send_mail
 
-    from mailer import send_mail
+        send, skipped, total = [], [], 0
+        for p in attachments:
+            size = os.path.getsize(p) / 1_048_576
+            if total + size <= MAX_MAIL_MB:
+                send.append(p)
+                total += size
+            else:
+                skipped.append(f"{os.path.basename(p)} ({size:.0f} MB)")
+        note = ""
+        if skipped:
+            note += "\nToo big for email, download from the GitHub Actions artifact: " + ", ".join(skipped)
+        if failed:
+            note += f"\n{len(failed)} article(s) could not be fetched."
+        if send:
+            send_mail(
+                subject=f"Study Notes - {topic} ({day_label})",
+                body=(f"Good morning! Today's full notes: {topic}\n"
+                      f"{len(chapters)} articles from {tutorial_url}{note}"),
+                attachments=send,
+            )
+        else:
+            print("All PDFs exceed the email limit; not sending (see workflow artifact).")
 
-    summary = "\n".join(f"- {s['topic']}: {s['subtopic']}\n  {s['url']}" for s in sections)
-    extra = "\nSlide-style PDF (landscape, full content) attached too." if len(attachments) > 1 else ""
-    send_mail(
-        subject=f"Study Notes {today.isoformat()} (Day {day_index + 1})",
-        body=f"Good morning Cusherahhh! Today's notes just 10 pagessss:{extra}\n\n{summary}",
-        attachments=attachments,
-    )
+    if is_last_day and not args.only:
+        _flag_finished()
 
 
 if __name__ == "__main__":

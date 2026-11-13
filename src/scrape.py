@@ -275,7 +275,7 @@ def fetch_article(url: str) -> dict | None:
         output_format="markdown",
         include_formatting=True,
         include_tables=True,
-        include_links=False,
+        include_links=True,
         include_images=True,   # diagrams are embedded later by full_content()
     )
     prepared, blocks = _prepare(page)

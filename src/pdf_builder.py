@@ -1,74 +1,52 @@
-import html as h
-
 from weasyprint import HTML
 
-from condense import full_content
-from scrape import embed_image
+from bundle import chapters_html, cover_html
 
-PAGE_MARGIN_MM = 4
-FONT_SIZES = [7.5, 7.0, 6.6, 6.2, 5.8, 5.4, 5.0]   # tried largest first
-COLUMNS = 2                                         # always 2 columns
-
-
-def _css(fs: float) -> str:
-    return f"""
-@page {{ size: A4; margin: {PAGE_MARGIN_MM}mm; }}
-* {{ box-sizing: border-box; }}
-body {{ margin: 0; font-family: "DejaVu Sans", Arial, sans-serif; font-size: {fs}pt; line-height: 1.25;
-       overflow-wrap: break-word; word-wrap: break-word; }}
-h1 {{ font-size: {fs * 1.5:.1f}pt; margin: 0 0 1.5mm; border-bottom: 0.6pt solid #333; }}
-.cols {{ column-gap: 3mm; column-rule: 0.4pt solid #bbb; }}
-.topic {{ margin: 0 0 2.5mm; }}
-h2 {{ font-size: {fs * 1.2:.1f}pt; margin: 0; padding: 1px 3px; color: #fff; background: #1a5f2a; break-after: avoid; }}
-h3 {{ font-size: {fs * 1.1:.1f}pt; margin: 2px 0; color: #0b3d91; break-after: avoid; }}
-h4 {{ font-size: {fs * 1.08:.1f}pt; margin: 4px 0 1px; color: #1a5f2a; border-bottom: 0.4pt solid #bbb; break-after: avoid; }}
-h5 {{ font-size: {fs}pt; margin: 3px 0 1px; color: #333; break-after: avoid; }}
-p {{ margin: 1px 0 2px; orphans: 2; widows: 2; }}
-ul, ol {{ margin: 1px 0; padding-left: 10px; }}
-li {{ margin: 0; }}
-pre {{ background: #f4f4f4; padding: 2px 3px; margin: 2px 0; white-space: pre-wrap; overflow-wrap: break-word;
-      word-wrap: break-word; font-family: "DejaVu Sans Mono", monospace; font-size: {fs * 0.88:.2f}pt;
-      line-height: 1.2; border-left: 2px solid #999; break-inside: auto; }}
-code {{ font-family: "DejaVu Sans Mono", monospace; font-size: {fs * 0.9:.2f}pt; }}
-img {{ display: block; max-width: 100%; height: auto; max-height: 80mm; margin: 2px auto; }}
-table {{ border-collapse: collapse; width: 100%; table-layout: fixed; margin: 2px 0; font-size: {fs * 0.92:.2f}pt; }}
-tr {{ break-inside: avoid; }}
-td, th {{ border: 0.4pt solid #aaa; padding: 0 2px; overflow-wrap: break-word; word-wrap: break-word; vertical-align: top; }}
-th {{ background: #eee; }}
-.src {{ font-size: {fs * 0.75:.1f}pt; color: #777; word-break: break-all; }}
+CSS = """
+@page {
+  size: A4; margin: 18mm 16mm 16mm 16mm;
+  @top-left { content: string(topic) "  \\00B7  " string(art); width: 100%;
+              font: bold 8pt "DejaVu Sans", Arial, sans-serif; color: #1a5f2a;
+              border-bottom: 0.6pt solid #1a5f2a; padding-bottom: 1.5mm; }
+  @bottom-right { content: counter(page) " / " counter(pages);
+                  font: 8pt "DejaVu Sans", Arial, sans-serif; color: #888; }
+}
+@page cover { @top-left { content: none; border: none; } @bottom-right { content: none; } }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10.5pt; line-height: 1.5;
+       color: #222; overflow-wrap: break-word; word-wrap: break-word; }
+.cover { page: cover; break-after: page; }
+.cover h1 { font-size: 30pt; margin: 0 0 2mm; color: #1a5f2a; string-set: topic content(); }
+.cover .date { font-size: 12pt; color: #555; margin: 0 0 8mm; }
+.cover ol { font-size: 9.5pt; line-height: 1.45; padding-left: 7mm; margin: 0; }
+.cover li { margin-bottom: 1mm; }
+.art { string-set: art content(); font-size: 16pt; line-height: 1.3; margin: 10mm 0 1mm; color: #111;
+       break-after: avoid; }
+.rule { border-top: 1.2pt solid #1a5f2a; margin: 0 0 4mm; }
+h4 { font-size: 13pt; color: #0b3d91; margin: 6mm 0 2mm; padding-left: 3mm;
+     border-left: 1.2mm solid #1a5f2a; break-after: avoid; }
+h5 { font-size: 11.5pt; color: #333; margin: 4mm 0 1.5mm; break-after: avoid; }
+p { margin: 0 0 2.6mm; orphans: 3; widows: 3; }
+ul, ol { margin: 0 0 3mm; padding-left: 7mm; }
+li { margin: 0 0 1.2mm; }
+a { color: #0b3d91; text-decoration: underline; word-break: break-all; }
+pre { background: #f4f4f4; border-left: 1.2mm solid #1a5f2a; padding: 2.5mm 3mm; margin: 3mm 0 4mm;
+      white-space: pre-wrap; overflow-wrap: break-word; font-family: "DejaVu Sans Mono", monospace;
+      font-size: 8.6pt; line-height: 1.35; break-inside: auto; }
+code { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; }
+img { display: block; max-width: 100%; max-height: 110mm; width: auto; height: auto;
+      margin: 3mm auto; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 3mm 0 4mm; font-size: 9pt; }
+tr { break-inside: avoid; }
+td, th { border: 0.5pt solid #aaa; padding: 1.2mm 2mm; vertical-align: top; overflow-wrap: break-word; }
+th { background: #1a5f2a; color: #fff; text-align: left; }
+.src { margin-top: 4mm; font-size: 7pt; color: #888; word-break: break-all; }
 """
 
 
-def _render(date_str: str, sections: list[dict], bodies: list[str], cols: int, fs: float) -> str:
-    parts = [f"<h1>Daily Study Notes - {h.escape(date_str)}</h1>"
-             f"<div class='cols' style='column-count:{cols}'>"]
-    for s, body in zip(sections, bodies):
-        parts.append("<div class='topic'>")
-        parts.append(f"<h2>{h.escape(s['topic'])}</h2><h3>{h.escape(s['subtopic'])}</h3>")
-        parts.append(body or "<p><i>No content could be fetched today.</i></p>")
-        if s.get("url"):
-            parts.append(f"<div class='src'>{h.escape(s['url'])}</div>")
-        parts.append("</div>")
-    parts.append("</div>")
-    return (f"<html><head><meta charset='utf-8'><style>{_css(fs)}</style></head>"
-            f"<body>{''.join(parts)}</body></html>")
-
-
-def build_pdf(date_str: str, sections: list[dict], out_path: str, max_pages: int = 6) -> int:
-    """Full articles, never trimmed. Always uses 2 columns, then shrinks the font until the PDF fits max_pages. If even the smallest
-    font doesn't fit, extra pages are added (nothing is hidden or cut)."""
-    bodies = [
-        full_content(s.get("html", ""),
-                     embed=lambda src, base=s.get("url", ""): embed_image(src, base))
-        for s in sections
-    ]
-
-    doc = None
-    for fs in FONT_SIZES:
-        doc = HTML(string=_render(date_str, sections, bodies, COLUMNS, fs)).render()
-        if len(doc.pages) <= max_pages:
-            break
+def build_pdf(date_str: str, topic: str, day_label: str, chapters: list[dict], out_path: str) -> int:
+    body = cover_html(topic, date_str, day_label, chapters) + chapters_html(chapters)
+    doc = HTML(string=f"<html><head><meta charset='utf-8'><style>{CSS}</style></head>"
+                      f"<body>{body}</body></html>").render()
     doc.write_pdf(out_path)
-    if len(doc.pages) > max_pages:
-        print(f"NOTE: {len(doc.pages)} pages (target {max_pages}) - kept full content at smallest font")
     return len(doc.pages)

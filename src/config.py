@@ -18,12 +18,6 @@ def get_day_index(start_date: str, today: date) -> int:
     return (today - date.fromisoformat(start_date)).days
 
 
-def pick_subtopics(topics: dict, day_index: int, only: str | None = None) -> list[tuple[str, str]]:
-    """Return [(topic, subtopic)] for the given day. Topics that ran out are skipped."""
-    picked = []
-    for topic, subs in topics.items():
-        if only and only.lower() != topic.lower():
-            continue
-        if 0 <= day_index < len(subs):
-            picked.append((topic, subs[day_index]))
-    return picked
+def pick_topic(topics: list[str], day_index: int) -> str | None:
+    """Day 1 -> first topic, Day 2 -> second ... None when before the start or all topics are done."""
+    return topics[day_index] if 0 <= day_index < len(topics) else None

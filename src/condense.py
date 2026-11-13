@@ -1,4 +1,5 @@
 import re
+from urllib.parse import urljoin
 
 from lxml import html as lh
 
@@ -8,10 +9,11 @@ _JUNK = re.compile(r"^(?:last updated|comment|improve|suggest changes|share your
 _KEEP_ATTRS = {"colspan", "rowspan"}
 
 
-def full_content(raw_html: str, embed=None, max_images: int = 200) -> str:
-    """Clean an article for the PDF WITHOUT shortening it: every heading, paragraph,
-    list, code block and table is kept. Only site junk is removed, links are flattened
-    to plain text, and images are embedded (or dropped when they can't be)."""
+def full_content(raw_html: str, embed=None, max_images: int = 200,
+                 keep_links: bool = False, base_url: str = "") -> str:
+    """Clean an article for the PDF WITHOUT shortening it. Only site junk is removed.
+    Links are kept as clickable links (keep_links=True) or flattened to text.
+    Images are embedded (or dropped when they can't be)."""
     if not raw_html.strip():
         return ""
     try:
@@ -22,9 +24,12 @@ def full_content(raw_html: str, embed=None, max_images: int = 200) -> str:
     for bad in root.xpath(".//script | .//style | .//iframe | .//noscript | .//form | .//button | .//svg"):
         bad.drop_tree()
     for a in root.xpath(".//a"):
-        a.drop_tag()
+        href = (a.get("href") or "").strip()
+        if keep_links and href and not href.lower().startswith(("javascript:", "#", "mailto:")):
+            a.set("href", urljoin(base_url, href))
+        else:
+            a.drop_tag()
 
-    # images: embed (once each) or drop
     seen: set[str] = set()
     count = 0
     for img in list(root.iter("img")):
@@ -40,7 +45,6 @@ def full_content(raw_html: str, embed=None, max_images: int = 200) -> str:
         else:
             img.drop_tree()
 
-    # junk / empty paragraphs
     for p in root.xpath(".//p"):
         text = " ".join(p.text_content().split())
         if p.xpath(".//img"):
@@ -48,16 +52,17 @@ def full_content(raw_html: str, embed=None, max_images: int = 200) -> str:
         if len(text) < 4 or (len(text) < 40 and _JUNK.match(text)):
             p.drop_tree()
 
-    # heading levels: h1/h2 -> h4, h3+ -> h5 (page-level h2/h3 are used by the layout)
+    # h1/h2 -> h4, h3+ -> h5 (h1/h3 are used by the page layout)
     for el in root.xpath(".//h1 | .//h2 | .//h3 | .//h4 | .//h5 | .//h6"):
         el.tag = "h4" if el.tag in ("h1", "h2") else "h5"
 
-    # strip attributes (classes, styles, widths...) so nothing can force overflow
     for el in root.iter():
         if not isinstance(el.tag, str):
             continue
         for attr in list(el.attrib):
             if el.tag == "img" and attr == "src":
+                continue
+            if el.tag == "a" and attr == "href":
                 continue
             if attr in _KEEP_ATTRS:
                 continue
