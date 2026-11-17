@@ -11,7 +11,7 @@ slides_max: 60
 # Day 1 = 1st article link on that page, Day 2 = 2nd, ...
 topics:
   Java:
-    - https://www.geeksforgeeks.org/java/java/
+    - https://www.geeksforgeeks.org/dsa/dsa-in-java/
   Python:
     - https://www.geeksforgeeks.org/python/python-programming-language-tutorial/
   DSA:
